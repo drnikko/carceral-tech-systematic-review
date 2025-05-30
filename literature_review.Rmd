@@ -1,0 +1,226 @@
+---
+title: "Literature Review"
+output: html_notebook
+---
+
+The code steps below were taken from [litsearchr](https://elizagrames.github.io/litsearchr/litsearchr_vignette.html)
+
+### **Import all of the search result files**
+
+```{r}
+search_directory <- "/Users/drnikki/Dropbox/research/carceral-tech/bibs"
+naiveimport <-
+  litsearchr::import_results(directory = search_directory, verbose = TRUE)
+
+nrow(naiveimport) # how many?
+
+```
+
+### **Deduplicate the results**
+
+```{r}
+naiveresults <-
+  litsearchr::remove_duplicates(naiveimport, field = "title", method = "string_osa")
+
+nrow(naiveresults)# how many?!
+```
+
+### **Extract Keywords from Title and Abstract**
+
+RAKE: Rapid Automatic Keyword Extraction (RAKE)
+
+The author of this package recommends a minimum frequency of 2, and the count that is printed shows the size with a low min frequency. It might be worth increasing the frequency to reduce the number of keywords.
+
+```{r}
+rakedkeywords <-
+  litsearchr::extract_terms(
+    text = paste(naiveresults$title, naiveresults$abstract),
+    method = "fakerake",
+    min_freq = 2,
+    ngrams = TRUE,
+    min_n = 2,
+    language = "English"
+  )
+
+```
+
+Here's the size (it's big!)
+
+```{r}
+length(rakedkeywords)
+```
+
+And the first 10 results
+
+```{r}
+head(rakedkeywords, 10)
+```
+
+### **Also load keywords from the database keyword fields**
+
+Because we are pulling from different databases, the keyword fields have different names. They are: keywords, author_keywords, ieee_terms, mesh_terms (I think, mesh?)
+
+```{r}
+taggedkeywords <-
+  litsearchr::extract_terms(
+    keywords = paste(naiveresults$keywords, naiveresults$author_keywords,naiveresults$ieee_terms, naiveresults$mesh_terms),
+    method = "tagged",
+    min_freq = 2,
+    ngrams = TRUE,
+    min_n = 2,
+    language = "English"
+  )
+
+```
+
+The size, again:
+
+```{r}
+length(taggedkeywords)
+```
+
+And the first 10
+
+```{r}
+head(taggedkeywords, 10)
+```
+
+#### 
+
+First, combine and deduplicate both sets of keywords. Count, now?
+
+```{r}
+all_keywords <- unique(append(taggedkeywords, rakedkeywords))
+length(all_keywords)
+```
+
+#### **Build the co-occurence network & identify changepoints in keyword importance: an example**
+
+We're going to make a document-feature matrix of the keywords. Here is a small example of one:
+
+```{r}
+smol_dfm <- litsearchr::create_dfm(
+  elements = c(
+    "Cross-scale occupancy dynamics of a postfire specialist
+    in response to variation across a fire regime",
+    "Variation in home-range size of Black-backed Woodpeckers",
+    "Black-backed woodpecker occupancy in burned and beetle-killed forests"
+  ),
+  features = c("occupancy", "variation", "black-backed woodpecker", "burn")
+)
+
+as.matrix(smol_dfm)
+```
+
+Then, we're going to create "a keyword co-occurrence network from an adjacency matrix trimmed to remove rare terms." Again, extending the smol example:
+
+```{r}
+smol_graph <- litsearchr::create_network(
+  search_dfm = as.matrix(smol_dfm),
+  min_studies = 1,
+  min_occ = 1
+)
+
+smol_graph
+```
+
+Next, we "Find the minimum node strength to use as a cutoff point for important nodes." with [find_cutoff](https://rdrr.io/github/elizagrames/litsearchr/man/find_cutoff.html)
+
+Note: The changepoint fit finds tipping points in the ranked order of node strengths to use as cutoffs. The cumulative fit option finds the node strength cutoff point at which a certain percent of the total strength of the graph is captured (e.g. the fewest nodes that contain 80% of the total strength).
+
+```{r}
+smolcut1 <- litsearchr::find_cutoff(smol_graph,
+            method = "cumulative",
+            percent = .9)
+
+smolcut2 <- litsearchr::find_cutoff(smol_graph,
+            method = "changepoint",
+            knot_num = 3)
+
+smolcut1
+smolcut2
+```
+
+Then, we reduce the graph with this new information. [reduce graph](https://rdrr.io/github/elizagrames/litsearchr/man/reduce_graph.html) "Takes the full graph and reduces it to only include nodes (and associated edges) greater than the cutoff strength for important nodes.
+
+```{r}
+smol_graph_reduced <- litsearchr::reduce_graph(smol_graph, cutoff_strength = smolcut1)
+smol_graph_reduced
+```
+
+### Again, but with the real data
+
+Turn our documents (aka, titles and abstracts) + all keywords into a document-feature matrix
+
+```{r}
+naivedfm <-
+  litsearchr::create_dfm(
+    elements = paste(naiveresults$title, naiveresults$abstract),
+    features = all_keywords
+  )
+```
+
+Then, create a network
+
+```{r}
+naivegraph <-
+  litsearchr::create_network(
+    search_dfm = naivedfm,
+    min_studies = 2,
+    min_occ = 2
+  )
+```
+
+**Identify change points in keyword importance**
+
+```{r}
+cutoff <-
+  litsearchr::find_cutoff(
+    naivegraph,
+    method = "cumulative",
+    percent = .80,
+    imp_method = "strength"
+  )
+
+```
+
+Reduce the graph
+
+```{r}
+reducedgraph <-
+  litsearchr::reduce_graph(naivegraph, cutoff_strength = cutoff[1])
+
+```
+
+```{r}
+searchterms <- litsearchr::get_keywords(reducedgraph)
+
+head(searchterms, 20)
+```
+
+We need to take these terms, and group them, and then use that to make more search terms that make sense. A manual example: <https://luketudge.github.io/litsearchr-tutorial/litsearchr_tutorial.html>
+
+```{r}
+write.csv(searchterms, "./search_terms.csv")
+# manually group terms in the csv
+# grouped_terms <- read.csv("./search_terms_grouped.csv")
+# extract the woodpecker terms from the csv
+# woodpecker_terms <- grouped_terms$term[grep("woodpecker", grouped_terms$group)]
+# join together a list of manually generated woodpecker terms with the ones from the csv
+# woodpeckers <- unique(append(c("woodpecker")), woodpecker_terms)
+# repeat this for all concept groups
+# then merge them into a list, using the code below as an example
+# mysearchterms <- list(woodpeckers, fire)
+```
+
+## What we are doing
+
+(from [atalsti](https://atlasti.com/guides/literature-review/literature-review-vs-meta-analysis)) Meta-analysis (can be done with R) : "The primary purpose of a meta-analysis is to synthesize [quantitative data](https://atlasti.com/research-hub/quantifying-qualitative-data) from multiple studies to arrive at a single conclusion."
+
+Meta-synthesis: Although meta-analyses are commonly associated with [quantitative research](https://atlasti.com/research-hub/quantitative-software), they can also be applied to [qualitative research](https://atlasti.com/guides/qualitative-research-guide-part-1/qualitative-research) through a process known as meta-synthesis. Meta-synthesis involves systematically reviewing and integrating findings from multiple qualitative studies to draw broader conclusions. This approach allows researchers to combine qualitative data to develop new theories, understand complex phenomena, and [gain insights](https://atlasti.com/trainings/quickly-gain-insights-with-ai-powered-tools) into contextual factors.
+
+Using meta-synthesis, qualitative meta-analyses can help provide a deeper understanding of a research topic by incorporating diverse perspectives and experiences from various studies. This method can reveal patterns and themes that might not be evident in individual qualitative studies, thereby enhancing the richness and depth of the analysis. By combining the strengths of both quantitative and qualitative research, meta-analyses can offer a more comprehensive view of the research landscape, supporting evidence-based practice and informed decision-making.
+
+## References
+
+-   <https://literaturesynthesis.github.io/>

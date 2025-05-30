@@ -11,7 +11,7 @@
 
 
 
-<title>R Notebook</title>
+<title>Literature Review</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -1746,68 +1746,369 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">R Notebook</h1>
+<h1 class="title toc-ignore">Literature Review</h1>
 
 </div>
 
 
 <!-- rnb-text-begin -->
-<div id="data-sources" class="section level2">
-<h2>Data Sources</h2>
-<p>We are focusing on databases that are commonly used by Computer
-Science, Engineering, and Medical researchers. All of the files
-referenced below are in the <code>bibs</code> folder.</p>
-<p>These files are maniuplated in the <code>literature_review.Rmd</code>
-file</p>
-<div id="usenix" class="section level3">
-<h3>Usenix</h3>
-<p>search: May 28, 2025</p>
-<ul>
-<li><a href="https://www.usenix.org/publications/proceedings/carceral">carceral</a>,
-1 result (similarly small results from “incarcerated”, “prison”, “jail”)
-(no export available)</li>
-</ul>
+<p>The code steps below were taken from <a href="https://elizagrames.github.io/litsearchr/litsearchr_vignette.html">litsearchr</a></p>
+<div id="import-all-of-the-search-result-files" class="section level3">
+<h3><strong>Import all of the search result files</strong></h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc2VhcmNoX2RpcmVjdG9yeSA8LSBcIi9Vc2Vycy9kcm5pa2tpL0Ryb3Bib3gvcmVzZWFyY2gvY2FyY2VyYWwtdGVjaC9iaWJzXCJcbm5haXZlaW1wb3J0IDwtXG4gIGxpdHNlYXJjaHI6OmltcG9ydF9yZXN1bHRzKGRpcmVjdG9yeSA9IHNlYXJjaF9kaXJlY3RvcnksIHZlcmJvc2UgPSBUUlVFKVxuXG5ucm93KG5haXZlaW1wb3J0KSAjIGhvdyBtYW55P1xuXG5gYGAifQ== -->
+<pre class="r"><code>search_directory &lt;- &quot;/Users/drnikki/Dropbox/research/carceral-tech/bibs&quot;
+naiveimport &lt;-
+  litsearchr::import_results(directory = search_directory, verbose = TRUE)
+
+nrow(naiveimport) # how many?
+</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
 </div>
-<div id="pubmed" class="section level3">
-<h3>PubMed</h3>
-<p>search: May 28, 2025:</p>
-<ul>
-<li><a href="https://pubmed.ncbi.nlm.nih.gov/?term=carceral">carceral</a> - 592
-<code>pubmed_carceral.csv</code></li>
-<li><a href="https://pubmed.ncbi.nlm.nih.gov/?term=carceral+technology">carceral
-technology (no quotes)</a> - 29
-<code>pubmed_carceral_technology.csv</code></li>
-<li><a href="https://pubmed.ncbi.nlm.nih.gov/?term=carceral+technologies">carceral
-technologies (no quotes)</a> - 29 -
-<code>pubmed_carceral_technologies.csv</code></li>
-</ul>
+<div id="deduplicate-the-results" class="section level3">
+<h3><strong>Deduplicate the results</strong></h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubmFpdmVyZXN1bHRzIDwtXG4gIGxpdHNlYXJjaHI6OnJlbW92ZV9kdXBsaWNhdGVzKG5haXZlaW1wb3J0LCBmaWVsZCA9IFwidGl0bGVcIiwgbWV0aG9kID0gXCJzdHJpbmdfb3NhXCIpXG5cbm5yb3cobmFpdmVyZXN1bHRzKSMgaG93IG1hbnk/IVxuYGBgIn0= -->
+<pre class="r"><code>naiveresults &lt;-
+  litsearchr::remove_duplicates(naiveimport, field = &quot;title&quot;, method = &quot;string_osa&quot;)
+
+nrow(naiveresults)# how many?!</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
 </div>
-<div id="acm-digital-library" class="section level3">
-<h3>ACM Digital Library</h3>
-<ul>
-<li><p>search: May 28, 2025</p></li>
-<li><p>searching: The ACM guide to computing literature (3,893,916
-records)</p></li>
-<li><p>[carceral] - 149 - <code>acm-carceral.bib</code></p></li>
-<li><p>carceral technology (no quotes) - 147 -
-<code>acm-carceral-technology.bib</code></p></li>
-<li><p>[carceral technologies (no quotes)] - 147 -
-<code>acm-carceral-technologies.bib</code></p></li>
-</ul>
+<div id="extract-keywords-from-title-and-abstract" class="section level3">
+<h3><strong>Extract Keywords from Title and Abstract</strong></h3>
+<p>RAKE: Rapid Automatic Keyword Extraction (RAKE)</p>
+<p>The author of this package recommends a minimum frequency of 2, and
+the count that is printed shows the size with a low min frequency. It
+might be worth increasing the frequency to reduce the number of
+keywords.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmFrZWRrZXl3b3JkcyA8LVxuICBsaXRzZWFyY2hyOjpleHRyYWN0X3Rlcm1zKFxuICAgIHRleHQgPSBwYXN0ZShuYWl2ZXJlc3VsdHMkdGl0bGUsIG5haXZlcmVzdWx0cyRhYnN0cmFjdCksXG4gICAgbWV0aG9kID0gXCJmYWtlcmFrZVwiLFxuICAgIG1pbl9mcmVxID0gMixcbiAgICBuZ3JhbXMgPSBUUlVFLFxuICAgIG1pbl9uID0gMixcbiAgICBsYW5ndWFnZSA9IFwiRW5nbGlzaFwiXG4gIClcblxuYGBgIn0= -->
+<pre class="r"><code>rakedkeywords &lt;-
+  litsearchr::extract_terms(
+    text = paste(naiveresults$title, naiveresults$abstract),
+    method = &quot;fakerake&quot;,
+    min_freq = 2,
+    ngrams = TRUE,
+    min_n = 2,
+    language = &quot;English&quot;
+  )
+</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Here’s the size (it’s big!)</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGVuZ3RoKHJha2Vka2V5d29yZHMpXG5gYGAifQ== -->
+<pre class="r"><code>length(rakedkeywords)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDMwMzVcbiJ9 -->
+<pre><code>[1] 3035</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>And the first 10 results</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaGVhZChyYWtlZGtleXdvcmRzLCAxMClcbmBgYCJ9 -->
+<pre class="r"><code>head(rakedkeywords, 10)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiIFsxXSBcIjYtbWV0ZXIgbG9uZy1yYW5nZVwiICAgICAgICAgIFwiYWJub3JtYWwgYmVoYXZpb3JcIiAgICAgICAgICAgXCJhYm9saXRpb25pc3QgYW5hbHlzaXNcIiAgICAgIFxuIFs0XSBcImFib2xpdGlvbmlzdCBmcmFtZXdvcmtcIiAgICAgIFwiYWJ1c2UgbW9uaXRvcmluZ1wiICAgICAgICAgICAgXCJhYnVzZSBwcmV2ZW50aW9uXCIgICAgICAgICAgIFxuIFs3XSBcImFidXNlIHRyZWF0bWVudFwiICAgICAgICAgICAgIFwiYWNhZGVtaWMgY291cnNlc1wiICAgICAgICAgICAgXCJhY2FkZW1pYyBpbmZvcm1hdGlvblwiICAgICAgIFxuWzEwXSBcImFjYWRlbWljIGluZm9ybWF0aW9uIHN5c3RlbVwiXG4ifQ== -->
+<pre><code> [1] &quot;6-meter long-range&quot;          &quot;abnormal behavior&quot;           &quot;abolitionist analysis&quot;      
+ [4] &quot;abolitionist framework&quot;      &quot;abuse monitoring&quot;            &quot;abuse prevention&quot;           
+ [7] &quot;abuse treatment&quot;             &quot;academic courses&quot;            &quot;academic information&quot;       
+[10] &quot;academic information system&quot;</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
 </div>
-<div id="ieee-explore" class="section level3">
-<h3>IEEE Explore</h3>
+<div id="also-load-keywords-from-the-database-keyword-fields" class="section level3">
+<h3><strong>Also load keywords from the database keyword
+fields</strong></h3>
+<p>Because we are pulling from different databases, the keyword fields
+have different names. They are: keywords, author_keywords, ieee_terms,
+mesh_terms (I think, mesh?)</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudGFnZ2Vka2V5d29yZHMgPC1cbiAgbGl0c2VhcmNocjo6ZXh0cmFjdF90ZXJtcyhcbiAgICBrZXl3b3JkcyA9IHBhc3RlKG5haXZlcmVzdWx0cyRrZXl3b3JkcywgbmFpdmVyZXN1bHRzJGF1dGhvcl9rZXl3b3JkcyxuYWl2ZXJlc3VsdHMkaWVlZV90ZXJtcywgbmFpdmVyZXN1bHRzJG1lc2hfdGVybXMpLFxuICAgIG1ldGhvZCA9IFwidGFnZ2VkXCIsXG4gICAgbWluX2ZyZXEgPSAyLFxuICAgIG5ncmFtcyA9IFRSVUUsXG4gICAgbWluX24gPSAyLFxuICAgIGxhbmd1YWdlID0gXCJFbmdsaXNoXCJcbiAgKVxuXG5gYGAifQ== -->
+<pre class="r"><code>taggedkeywords &lt;-
+  litsearchr::extract_terms(
+    keywords = paste(naiveresults$keywords, naiveresults$author_keywords,naiveresults$ieee_terms, naiveresults$mesh_terms),
+    method = &quot;tagged&quot;,
+    min_freq = 2,
+    ngrams = TRUE,
+    min_n = 2,
+    language = &quot;English&quot;
+  )
+</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>The size, again:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGVuZ3RoKHRhZ2dlZGtleXdvcmRzKVxuYGBgIn0= -->
+<pre class="r"><code>length(taggedkeywords)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDE0MjhcbiJ9 -->
+<pre><code>[1] 1428</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>And the first 10</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaGVhZCh0YWdnZWRrZXl3b3JkcywgMTApXG5gYGAifQ== -->
+<pre class="r"><code>head(taggedkeywords, 10)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiIFsxXSBcIjE5dGggY2VudHVyeVwiICAgICAgICAgICAgXCIyMHRoIGNlbnR1cnlcIiAgICAgICAgICAgIFwiMjFzdCBjZW50dXJ5XCIgICAgICAgICAgICBcIjNnIG1vYmlsZSBjb21tdW5pY2F0aW9uXCIgXCI1ZyBtb2JpbGUgY29tbXVuaWNhdGlvblwiXG4gWzZdIFwiYWJvcmlnaW5hbCBhdXN0cmFsaWFuc1wiICBcImFidXNlZCB3b21lblwiICAgICAgICAgICAgXCJhY2FkZW1pYyBhY2hpZXZlbWVudFwiICAgIFwiYWNjZXNzIGNvbnRyb2xcIiAgICAgICAgICBcImFjdGlvbiByZWNvZ25pdGlvblwiICAgICBcbiJ9 -->
+<pre><code> [1] &quot;19th century&quot;            &quot;20th century&quot;            &quot;21st century&quot;            &quot;3g mobile communication&quot; &quot;5g mobile communication&quot;
+ [6] &quot;aboriginal australians&quot;  &quot;abused women&quot;            &quot;academic achievement&quot;    &quot;access control&quot;          &quot;action recognition&quot;     </code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<div id="section" class="section level4">
+<h4></h4>
+<p>First, combine and deduplicate both sets of keywords. Count, now?</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="build-the-co-occurence-network-identify-changepoints-in-keyword-importance-an-example" class="section level4">
+<h4><strong>Build the co-occurence network &amp; identify changepoints
+in keyword importance: an example</strong></h4>
+<p>We’re going to make a document-feature matrix of the keywords. Here
+is a small example of one:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc21vbF9kZm0gPC0gbGl0c2VhcmNocjo6Y3JlYXRlX2RmbShcbiAgZWxlbWVudHMgPSBjKFxuICAgIFwiQ3Jvc3Mtc2NhbGUgb2NjdXBhbmN5IGR5bmFtaWNzIG9mIGEgcG9zdGZpcmUgc3BlY2lhbGlzdFxuICAgIGluIHJlc3BvbnNlIHRvIHZhcmlhdGlvbiBhY3Jvc3MgYSBmaXJlIHJlZ2ltZVwiLFxuICAgIFwiVmFyaWF0aW9uIGluIGhvbWUtcmFuZ2Ugc2l6ZSBvZiBCbGFjay1iYWNrZWQgV29vZHBlY2tlcnNcIixcbiAgICBcIkJsYWNrLWJhY2tlZCB3b29kcGVja2VyIG9jY3VwYW5jeSBpbiBidXJuZWQgYW5kIGJlZXRsZS1raWxsZWQgZm9yZXN0c1wiXG4gICksXG4gIGZlYXR1cmVzID0gYyhcIm9jY3VwYW5jeVwiLCBcInZhcmlhdGlvblwiLCBcImJsYWNrLWJhY2tlZCB3b29kcGVja2VyXCIsIFwiYnVyblwiKVxuKVxuXG5hcy5tYXRyaXgoc21vbF9kZm0pXG5gYGAifQ== -->
+<pre class="r"><code>smol_dfm &lt;- litsearchr::create_dfm(
+  elements = c(
+    &quot;Cross-scale occupancy dynamics of a postfire specialist
+    in response to variation across a fire regime&quot;,
+    &quot;Variation in home-range size of Black-backed Woodpeckers&quot;,
+    &quot;Black-backed woodpecker occupancy in burned and beetle-killed forests&quot;
+  ),
+  features = c(&quot;occupancy&quot;, &quot;variation&quot;, &quot;black-backed woodpecker&quot;, &quot;burn&quot;)
+)
+
+as.matrix(smol_dfm)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiICAgICBvY2N1cGFuY3kgdmFyaWF0aW9uIGJsYWNrLWJhY2tlZCB3b29kcGVja2VyIGJ1cm5cblsxLF0gICAgICAgICAxICAgICAgICAgMSAgICAgICAgICAgICAgICAgICAgICAgMCAgICAwXG5bMixdICAgICAgICAgMCAgICAgICAgIDEgICAgICAgICAgICAgICAgICAgICAgIDEgICAgMFxuWzMsXSAgICAgICAgIDEgICAgICAgICAwICAgICAgICAgICAgICAgICAgICAgICAxICAgIDFcbiJ9 -->
+<pre><code>     occupancy variation black-backed woodpecker burn
+[1,]         1         1                       0    0
+[2,]         0         1                       1    0
+[3,]         1         0                       1    1</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Then, we’re going to create “a keyword co-occurrence network from an
+adjacency matrix trimmed to remove rare terms.” Again, extending the
+smol example:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc21vbF9ncmFwaCA8LSBsaXRzZWFyY2hyOjpjcmVhdGVfbmV0d29yayhcbiAgc2VhcmNoX2RmbSA9IGFzLm1hdHJpeChzbW9sX2RmbSksXG4gIG1pbl9zdHVkaWVzID0gMSxcbiAgbWluX29jYyA9IDFcbilcblxuc21vbF9ncmFwaFxuYGBgIn0= -->
+<pre class="r"><code>smol_graph &lt;- litsearchr::create_network(
+  search_dfm = as.matrix(smol_dfm),
+  min_studies = 1,
+  min_occ = 1
+)
+
+smol_graph</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiSUdSQVBIIDRmZGRmNWUgVU5XLSA0IDUgLS0gXG4rIGF0dHI6IG5hbWUgKHYvYyksIHdlaWdodCAoZS9uKVxuKyBlZGdlcyBmcm9tIDRmZGRmNWUgKHZlcnRleCBuYW1lcyk6XG5bMV0gb2NjdXBhbmN5ICAgICAgICAgICAgICAtLXZhcmlhdGlvbiAgICAgICAgICAgICAgIG9jY3VwYW5jeSAgICAgICAgICAgICAgLS1ibGFjay1iYWNrZWQgd29vZHBlY2tlclxuWzNdIG9jY3VwYW5jeSAgICAgICAgICAgICAgLS1idXJuICAgICAgICAgICAgICAgICAgICB2YXJpYXRpb24gICAgICAgICAgICAgIC0tYmxhY2stYmFja2VkIHdvb2RwZWNrZXJcbls1XSBibGFjay1iYWNrZWQgd29vZHBlY2tlci0tYnVybiAgICAgICAgICAgICAgICAgICBcbiJ9 -->
+<pre><code>IGRAPH 4fddf5e UNW- 4 5 -- 
++ attr: name (v/c), weight (e/n)
++ edges from 4fddf5e (vertex names):
+[1] occupancy              --variation               occupancy              --black-backed woodpecker
+[3] occupancy              --burn                    variation              --black-backed woodpecker
+[5] black-backed woodpecker--burn                   </code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Next, we “Find the minimum node strength to use as a cutoff point for
+important nodes.” with <a href="https://rdrr.io/github/elizagrames/litsearchr/man/find_cutoff.html">find_cutoff</a></p>
+<p>Note: The changepoint fit finds tipping points in the ranked order of
+node strengths to use as cutoffs. The cumulative fit option finds the
+node strength cutoff point at which a certain percent of the total
+strength of the graph is captured (e.g. the fewest nodes that contain
+80% of the total strength).</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc21vbGN1dDEgPC0gbGl0c2VhcmNocjo6ZmluZF9jdXRvZmYoc21vbF9ncmFwaCxcbiAgICAgICAgICAgIG1ldGhvZCA9IFwiY3VtdWxhdGl2ZVwiLFxuICAgICAgICAgICAgcGVyY2VudCA9IC45KVxuXG5zbW9sY3V0MiA8LSBsaXRzZWFyY2hyOjpmaW5kX2N1dG9mZihzbW9sX2dyYXBoLFxuICAgICAgICAgICAgbWV0aG9kID0gXCJjaGFuZ2Vwb2ludFwiLFxuICAgICAgICAgICAga25vdF9udW0gPSAzKVxuXG5zbW9sY3V0MVxuYGBgIn0= -->
+<pre class="r"><code>smolcut1 &lt;- litsearchr::find_cutoff(smol_graph,
+            method = &quot;cumulative&quot;,
+            percent = .9)
+
+smolcut2 &lt;- litsearchr::find_cutoff(smol_graph,
+            method = &quot;changepoint&quot;,
+            knot_num = 3)
+
+smolcut1</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDJcbiJ9 -->
+<pre><code>[1] 2</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc21vbGN1dDJcbmBgYCJ9 -->
+<pre class="r"><code>smolcut2</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDNcbiJ9 -->
+<pre><code>[1] 3</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Then, we reduce the graph with this new information. <a href="https://rdrr.io/github/elizagrames/litsearchr/man/reduce_graph.html">reduce
+graph</a> “Takes the full graph and reduces it to only include nodes
+(and associated edges) greater than the cutoff strength for important
+nodes.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc21vbF9ncmFwaF9yZWR1Y2VkIDwtIGxpdHNlYXJjaHI6OnJlZHVjZV9ncmFwaChzbW9sX2dyYXBoLCBjdXRvZmZfc3RyZW5ndGggPSBzbW9sY3V0MSlcbnNtb2xfZ3JhcGhfcmVkdWNlZFxuYGBgIn0= -->
+<pre class="r"><code>smol_graph_reduced &lt;- litsearchr::reduce_graph(smol_graph, cutoff_strength = smolcut1)
+smol_graph_reduced</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiSUdSQVBIIGNmMmEyZWQgVU5XLSA0IDUgLS0gXG4rIGF0dHI6IG5hbWUgKHYvYyksIHdlaWdodCAoZS9uKVxuKyBlZGdlcyBmcm9tIGNmMmEyZWQgKHZlcnRleCBuYW1lcyk6XG5bMV0gb2NjdXBhbmN5ICAgICAgICAgICAgICAtLXZhcmlhdGlvbiAgICAgICAgICAgICAgIG9jY3VwYW5jeSAgICAgICAgICAgICAgLS1ibGFjay1iYWNrZWQgd29vZHBlY2tlclxuWzNdIG9jY3VwYW5jeSAgICAgICAgICAgICAgLS1idXJuICAgICAgICAgICAgICAgICAgICB2YXJpYXRpb24gICAgICAgICAgICAgIC0tYmxhY2stYmFja2VkIHdvb2RwZWNrZXJcbls1XSBibGFjay1iYWNrZWQgd29vZHBlY2tlci0tYnVybiAgICAgICAgICAgICAgICAgICBcbiJ9 -->
+<pre><code>IGRAPH cf2a2ed UNW- 4 5 -- 
++ attr: name (v/c), weight (e/n)
++ edges from cf2a2ed (vertex names):
+[1] occupancy              --variation               occupancy              --black-backed woodpecker
+[3] occupancy              --burn                    variation              --black-backed woodpecker
+[5] black-backed woodpecker--burn                   </code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+</div>
+<div id="again-but-with-the-real-data" class="section level3">
+<h3>Again, but with the real data</h3>
+<p>Turn our documents (aka, titles and abstracts) + all keywords into a
+document-feature matrix</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubmFpdmVkZm0gPC1cbiAgbGl0c2VhcmNocjo6Y3JlYXRlX2RmbShcbiAgICBlbGVtZW50cyA9IHBhc3RlKG5haXZlcmVzdWx0cyR0aXRsZSwgbmFpdmVyZXN1bHRzJGFic3RyYWN0KSxcbiAgICBmZWF0dXJlcyA9IGFsbF9rZXl3b3Jkc1xuICApXG5gYGAifQ== -->
+<pre class="r"><code>naivedfm &lt;-
+  litsearchr::create_dfm(
+    elements = paste(naiveresults$title, naiveresults$abstract),
+    features = all_keywords
+  )</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Then, create a network</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubmFpdmVncmFwaCA8LVxuICBsaXRzZWFyY2hyOjpjcmVhdGVfbmV0d29yayhcbiAgICBzZWFyY2hfZGZtID0gbmFpdmVkZm0sXG4gICAgbWluX3N0dWRpZXMgPSAyLFxuICAgIG1pbl9vY2MgPSAyXG4gIClcbmBgYCJ9 -->
+<pre class="r"><code>naivegraph &lt;-
+  litsearchr::create_network(
+    search_dfm = naivedfm,
+    min_studies = 2,
+    min_occ = 2
+  )</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p><strong>Identify change points in keyword importance</strong></p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY3V0b2ZmIDwtXG4gIGxpdHNlYXJjaHI6OmZpbmRfY3V0b2ZmKFxuICAgIG5haXZlZ3JhcGgsXG4gICAgbWV0aG9kID0gXCJjdW11bGF0aXZlXCIsXG4gICAgcGVyY2VudCA9IC44MCxcbiAgICBpbXBfbWV0aG9kID0gXCJzdHJlbmd0aFwiXG4gIClcblxuYGBgIn0= -->
+<pre class="r"><code>cutoff &lt;-
+  litsearchr::find_cutoff(
+    naivegraph,
+    method = &quot;cumulative&quot;,
+    percent = .80,
+    imp_method = &quot;strength&quot;
+  )
+</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Reduce the graph</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVkdWNlZGdyYXBoIDwtXG4gIGxpdHNlYXJjaHI6OnJlZHVjZV9ncmFwaChuYWl2ZWdyYXBoLCBjdXRvZmZfc3RyZW5ndGggPSBjdXRvZmZbMV0pXG5cbmBgYCJ9 -->
+<pre class="r"><code>reducedgraph &lt;-
+  litsearchr::reduce_graph(naivegraph, cutoff_strength = cutoff[1])
+</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc2VhcmNodGVybXMgPC0gbGl0c2VhcmNocjo6Z2V0X2tleXdvcmRzKHJlZHVjZWRncmFwaClcblxuaGVhZChzZWFyY2h0ZXJtcywgMjApXG5gYGAifQ== -->
+<pre class="r"><code>searchterms &lt;- litsearchr::get_keywords(reducedgraph)
+
+head(searchterms, 20)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiIFsxXSBcIjIwdGggY2VudHVyeVwiICAgICAgICAgICAgIFwiYWNjZXNzIGNvbnRyb2xcIiAgICAgICAgICAgXCJhY3Rpb24gcmVjb2duaXRpb25cIiAgICAgICBcImFjdGl2aXR5IHJlY29nbml0aW9uXCIgICAgIFwiYWlyIGNvbmRpdGlvbmluZ1wiICAgICAgICBcbiBbNl0gXCJhaXIgcXVhbGl0eVwiICAgICAgICAgICAgICBcImFsZ29yaXRobWljIGJpYXNcIiAgICAgICAgIFwiYWxnb3JpdGhtaWMgZmFpcm5lc3NcIiAgICAgXCJhcnRpZmljaWFsIGludGVsbGlnZW5jZVwiICBcImF1Z21lbnRlZCByZWFsaXR5XCIgICAgICAgXG5bMTFdIFwiYmlnIGRhdGFcIiAgICAgICAgICAgICAgICAgXCJibGFjayBwZW9wbGVcIiAgICAgICAgICAgICBcImNhc2Ugc3R1ZGllc1wiICAgICAgICAgICAgIFwiY2xvdWQgY29tcHV0aW5nXCIgICAgICAgICAgXCJjb21tdW5pY2F0aW9uIHRlY2hub2xvZ3lcIlxuWzE2XSBcImNvbW11bml0eSBzdXBwb3J0XCIgICAgICAgIFwiY29tcHV0ZXIgc2NpZW5jZVwiICAgICAgICAgXCJjb21wdXRlciB2aXNpb25cIiAgICAgICAgICBcImNvbnRlbnQgbW9kZXJhdGlvblwiICAgICAgIFwiY29udHJhc3RpdmUgbGVhcm5pbmdcIiAgICBcbiJ9 -->
+<pre><code> [1] &quot;20th century&quot;             &quot;access control&quot;           &quot;action recognition&quot;       &quot;activity recognition&quot;     &quot;air conditioning&quot;        
+ [6] &quot;air quality&quot;              &quot;algorithmic bias&quot;         &quot;algorithmic fairness&quot;     &quot;artificial intelligence&quot;  &quot;augmented reality&quot;       
+[11] &quot;big data&quot;                 &quot;black people&quot;             &quot;case studies&quot;             &quot;cloud computing&quot;          &quot;communication technology&quot;
+[16] &quot;community support&quot;        &quot;computer science&quot;         &quot;computer vision&quot;          &quot;content moderation&quot;       &quot;contrastive learning&quot;    </code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>We need to take these terms, and group them, and then use that to
+make more search terms that make sense. A manual example: <a href="https://luketudge.github.io/litsearchr-tutorial/litsearchr_tutorial.html" class="uri">https://luketudge.github.io/litsearchr-tutorial/litsearchr_tutorial.html</a></p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxud3JpdGUuY3N2KHNlYXJjaHRlcm1zLCBcIi4vc2VhcmNoX3Rlcm1zLmNzdlwiKVxuIyBtYW51YWxseSBncm91cCB0ZXJtcyBpbiB0aGUgY3N2XG4jIGdyb3VwZWRfdGVybXMgPC0gcmVhZC5jc3YoXCIuL3NlYXJjaF90ZXJtc19ncm91cGVkLmNzdlwiKVxuIyBleHRyYWN0IHRoZSB3b29kcGVja2VyIHRlcm1zIGZyb20gdGhlIGNzdlxuIyB3b29kcGVja2VyX3Rlcm1zIDwtIGdyb3VwZWRfdGVybXMkdGVybVtncmVwKFwid29vZHBlY2tlclwiLCBncm91cGVkX3Rlcm1zJGdyb3VwKV1cbiMgam9pbiB0b2dldGhlciBhIGxpc3Qgb2YgbWFudWFsbHkgZ2VuZXJhdGVkIHdvb2RwZWNrZXIgdGVybXMgd2l0aCB0aGUgb25lcyBmcm9tIHRoZSBjc3ZcbiMgd29vZHBlY2tlcnMgPC0gdW5pcXVlKGFwcGVuZChjKFwid29vZHBlY2tlclwiKSksIHdvb2RwZWNrZXJfdGVybXMpXG4jIHJlcGVhdCB0aGlzIGZvciBhbGwgY29uY2VwdCBncm91cHNcbiMgdGhlbiBtZXJnZSB0aGVtIGludG8gYSBsaXN0LCB1c2luZyB0aGUgY29kZSBiZWxvdyBhcyBhbiBleGFtcGxlXG4jIG15c2VhcmNodGVybXMgPC0gbGlzdCh3b29kcGVja2VycywgZmlyZSlcbmBgYCJ9 -->
+<pre class="r"><code>write.csv(searchterms, &quot;./search_terms.csv&quot;)
+# manually group terms in the csv
+# grouped_terms &lt;- read.csv(&quot;./search_terms_grouped.csv&quot;)
+# extract the woodpecker terms from the csv
+# woodpecker_terms &lt;- grouped_terms$term[grep(&quot;woodpecker&quot;, grouped_terms$group)]
+# join together a list of manually generated woodpecker terms with the ones from the csv
+# woodpeckers &lt;- unique(append(c(&quot;woodpecker&quot;)), woodpecker_terms)
+# repeat this for all concept groups
+# then merge them into a list, using the code below as an example
+# mysearchterms &lt;- list(woodpeckers, fire)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="what-we-are-doing" class="section level2">
+<h2>What we are doing</h2>
+<p>(from <a href="https://atlasti.com/guides/literature-review/literature-review-vs-meta-analysis">atalsti</a>)
+Meta-analysis (can be done with R) : “The primary purpose of a
+meta-analysis is to synthesize <a href="https://atlasti.com/research-hub/quantifying-qualitative-data">quantitative
+data</a> from multiple studies to arrive at a single conclusion.”</p>
+<p>Meta-synthesis: Although meta-analyses are commonly associated with
+<a href="https://atlasti.com/research-hub/quantitative-software">quantitative
+research</a>, they can also be applied to <a href="https://atlasti.com/guides/qualitative-research-guide-part-1/qualitative-research">qualitative
+research</a> through a process known as meta-synthesis. Meta-synthesis
+involves systematically reviewing and integrating findings from multiple
+qualitative studies to draw broader conclusions. This approach allows
+researchers to combine qualitative data to develop new theories,
+understand complex phenomena, and <a href="https://atlasti.com/trainings/quickly-gain-insights-with-ai-powered-tools">gain
+insights</a> into contextual factors.</p>
+<p>Using meta-synthesis, qualitative meta-analyses can help provide a
+deeper understanding of a research topic by incorporating diverse
+perspectives and experiences from various studies. This method can
+reveal patterns and themes that might not be evident in individual
+qualitative studies, thereby enhancing the richness and depth of the
+analysis. By combining the strengths of both quantitative and
+qualitative research, meta-analyses can offer a more comprehensive view
+of the research landscape, supporting evidence-based practice and
+informed decision-making.</p>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
 <ul>
-<li><p>search: May 28, 2025</p></li>
-<li><p>[carceral] - 0 results</p></li>
-<li><p>[jail OR prison OR incarceration] - 695 -
-<code>IEEE-jailprisonincarceration.csv</code></p></li>
+<li><a href="https://literaturesynthesis.github.io/" class="uri">https://literaturesynthesis.github.io/</a></li>
 </ul>
 <!-- rnb-text-end -->
 </div>
-</div>
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiUiBOb3RlYm9vayIKb3V0cHV0OiBodG1sX25vdGVib29rCi0tLQoKIyMgRGF0YSBTb3VyY2VzCgpXZSBhcmUgZm9jdXNpbmcgb24gZGF0YWJhc2VzIHRoYXQgYXJlIGNvbW1vbmx5IHVzZWQgYnkgQ29tcHV0ZXIgU2NpZW5jZSwgRW5naW5lZXJpbmcsIGFuZCBNZWRpY2FsIHJlc2VhcmNoZXJzLiBBbGwgb2YgdGhlIGZpbGVzIHJlZmVyZW5jZWQgYmVsb3cgYXJlIGluIHRoZSBgYmlic2AgZm9sZGVyLgoKVGhlc2UgZmlsZXMgYXJlIG1hbml1cGxhdGVkIGluIHRoZSBgbGl0ZXJhdHVyZV9yZXZpZXcuUm1kYCBmaWxlCgojIyMgVXNlbml4CgpzZWFyY2g6IE1heSAyOCwgMjAyNQoKLSAgICBbY2FyY2VyYWxdKGh0dHBzOi8vd3d3LnVzZW5peC5vcmcvcHVibGljYXRpb25zL3Byb2NlZWRpbmdzL2NhcmNlcmFsKSwgMSByZXN1bHQgKHNpbWlsYXJseSBzbWFsbCByZXN1bHRzIGZyb20gImluY2FyY2VyYXRlZCIsICJwcmlzb24iLCAiamFpbCIpIChubyBleHBvcnQgYXZhaWxhYmxlKQoKIyMjIFB1Yk1lZAoKc2VhcmNoOiBNYXkgMjgsIDIwMjU6CgotICAgW2NhcmNlcmFsXShodHRwczovL3B1Ym1lZC5uY2JpLm5sbS5uaWguZ292Lz90ZXJtPWNhcmNlcmFsKSAtIDU5MiBgcHVibWVkX2NhcmNlcmFsLmNzdmAKLSAgIFtjYXJjZXJhbCB0ZWNobm9sb2d5IChubyBxdW90ZXMpXShodHRwczovL3B1Ym1lZC5uY2JpLm5sbS5uaWguZ292Lz90ZXJtPWNhcmNlcmFsK3RlY2hub2xvZ3kpIC0gMjkgYHB1Ym1lZF9jYXJjZXJhbF90ZWNobm9sb2d5LmNzdmAKLSAgIFtjYXJjZXJhbCB0ZWNobm9sb2dpZXMgKG5vIHF1b3RlcyldKGh0dHBzOi8vcHVibWVkLm5jYmkubmxtLm5paC5nb3YvP3Rlcm09Y2FyY2VyYWwrdGVjaG5vbG9naWVzKSAtIDI5IC0gYHB1Ym1lZF9jYXJjZXJhbF90ZWNobm9sb2dpZXMuY3N2YAoKIyMjIEFDTSBEaWdpdGFsIExpYnJhcnkKCi0gICBzZWFyY2g6IE1heSAyOCwgMjAyNQoKLSAgIHNlYXJjaGluZzogVGhlIEFDTSBndWlkZSB0byBjb21wdXRpbmcgbGl0ZXJhdHVyZSAoMyw4OTMsOTE2IHJlY29yZHMpCgotICAgW2NhcmNlcmFsXSAtIDE0OSAtIGBhY20tY2FyY2VyYWwuYmliYAoKLSAgIGNhcmNlcmFsIHRlY2hub2xvZ3kgKG5vIHF1b3RlcykgLSAxNDcgLSBgYWNtLWNhcmNlcmFsLXRlY2hub2xvZ3kuYmliYAoKLSAgIFtjYXJjZXJhbCB0ZWNobm9sb2dpZXMgKG5vIHF1b3RlcyldIC0gMTQ3IC0gYGFjbS1jYXJjZXJhbC10ZWNobm9sb2dpZXMuYmliYAoKIyMjIElFRUUgRXhwbG9yZQoKLSAgIHNlYXJjaDogTWF5IDI4LCAyMDI1CgotICAgW2NhcmNlcmFsXSAtIDAgcmVzdWx0cwoKLSAgIFtqYWlsIE9SIHByaXNvbiBPUiBpbmNhcmNlcmF0aW9uXSAtIDY5NSAtIGBJRUVFLWphaWxwcmlzb25pbmNhcmNlcmF0aW9uLmNzdmAK</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiTGl0ZXJhdHVyZSBSZXZpZXciCm91dHB1dDogaHRtbF9ub3RlYm9vawotLS0KClRoZSBjb2RlIHN0ZXBzIGJlbG93IHdlcmUgdGFrZW4gZnJvbSBbbGl0c2VhcmNocl0oaHR0cHM6Ly9lbGl6YWdyYW1lcy5naXRodWIuaW8vbGl0c2VhcmNoci9saXRzZWFyY2hyX3ZpZ25ldHRlLmh0bWwpCgojIyMgKipJbXBvcnQgYWxsIG9mIHRoZSBzZWFyY2ggcmVzdWx0IGZpbGVzKioKCmBgYHtyfQpzZWFyY2hfZGlyZWN0b3J5IDwtICIvVXNlcnMvZHJuaWtraS9Ecm9wYm94L3Jlc2VhcmNoL2NhcmNlcmFsLXRlY2gvYmlicyIKbmFpdmVpbXBvcnQgPC0KICBsaXRzZWFyY2hyOjppbXBvcnRfcmVzdWx0cyhkaXJlY3RvcnkgPSBzZWFyY2hfZGlyZWN0b3J5LCB2ZXJib3NlID0gVFJVRSkKCm5yb3cobmFpdmVpbXBvcnQpICMgaG93IG1hbnk/CgpgYGAKCiMjIyAqKkRlZHVwbGljYXRlIHRoZSByZXN1bHRzKioKCmBgYHtyfQpuYWl2ZXJlc3VsdHMgPC0KICBsaXRzZWFyY2hyOjpyZW1vdmVfZHVwbGljYXRlcyhuYWl2ZWltcG9ydCwgZmllbGQgPSAidGl0bGUiLCBtZXRob2QgPSAic3RyaW5nX29zYSIpCgpucm93KG5haXZlcmVzdWx0cykjIGhvdyBtYW55PyEKYGBgCgojIyMgKipFeHRyYWN0IEtleXdvcmRzIGZyb20gVGl0bGUgYW5kIEFic3RyYWN0KioKClJBS0U6IFJhcGlkIEF1dG9tYXRpYyBLZXl3b3JkIEV4dHJhY3Rpb24gKFJBS0UpCgpUaGUgYXV0aG9yIG9mIHRoaXMgcGFja2FnZSByZWNvbW1lbmRzIGEgbWluaW11bSBmcmVxdWVuY3kgb2YgMiwgYW5kIHRoZSBjb3VudCB0aGF0IGlzIHByaW50ZWQgc2hvd3MgdGhlIHNpemUgd2l0aCBhIGxvdyBtaW4gZnJlcXVlbmN5LiBJdCBtaWdodCBiZSB3b3J0aCBpbmNyZWFzaW5nIHRoZSBmcmVxdWVuY3kgdG8gcmVkdWNlIHRoZSBudW1iZXIgb2Yga2V5d29yZHMuCgpgYGB7cn0KcmFrZWRrZXl3b3JkcyA8LQogIGxpdHNlYXJjaHI6OmV4dHJhY3RfdGVybXMoCiAgICB0ZXh0ID0gcGFzdGUobmFpdmVyZXN1bHRzJHRpdGxlLCBuYWl2ZXJlc3VsdHMkYWJzdHJhY3QpLAogICAgbWV0aG9kID0gImZha2VyYWtlIiwKICAgIG1pbl9mcmVxID0gMiwKICAgIG5ncmFtcyA9IFRSVUUsCiAgICBtaW5fbiA9IDIsCiAgICBsYW5ndWFnZSA9ICJFbmdsaXNoIgogICkKCmBgYAoKSGVyZSdzIHRoZSBzaXplIChpdCdzIGJpZyEpCgpgYGB7cn0KbGVuZ3RoKHJha2Vka2V5d29yZHMpCmBgYAoKQW5kIHRoZSBmaXJzdCAxMCByZXN1bHRzCgpgYGB7cn0KaGVhZChyYWtlZGtleXdvcmRzLCAxMCkKYGBgCgojIyMgKipBbHNvIGxvYWQga2V5d29yZHMgZnJvbSB0aGUgZGF0YWJhc2Uga2V5d29yZCBmaWVsZHMqKgoKQmVjYXVzZSB3ZSBhcmUgcHVsbGluZyBmcm9tIGRpZmZlcmVudCBkYXRhYmFzZXMsIHRoZSBrZXl3b3JkIGZpZWxkcyBoYXZlIGRpZmZlcmVudCBuYW1lcy4gVGhleSBhcmU6IGtleXdvcmRzLCBhdXRob3Jfa2V5d29yZHMsIGllZWVfdGVybXMsIG1lc2hfdGVybXMgKEkgdGhpbmssIG1lc2g/KQoKYGBge3J9CnRhZ2dlZGtleXdvcmRzIDwtCiAgbGl0c2VhcmNocjo6ZXh0cmFjdF90ZXJtcygKICAgIGtleXdvcmRzID0gcGFzdGUobmFpdmVyZXN1bHRzJGtleXdvcmRzLCBuYWl2ZXJlc3VsdHMkYXV0aG9yX2tleXdvcmRzLG5haXZlcmVzdWx0cyRpZWVlX3Rlcm1zLCBuYWl2ZXJlc3VsdHMkbWVzaF90ZXJtcyksCiAgICBtZXRob2QgPSAidGFnZ2VkIiwKICAgIG1pbl9mcmVxID0gMiwKICAgIG5ncmFtcyA9IFRSVUUsCiAgICBtaW5fbiA9IDIsCiAgICBsYW5ndWFnZSA9ICJFbmdsaXNoIgogICkKCmBgYAoKVGhlIHNpemUsIGFnYWluOgoKYGBge3J9Cmxlbmd0aCh0YWdnZWRrZXl3b3JkcykKYGBgCgpBbmQgdGhlIGZpcnN0IDEwCgpgYGB7cn0KaGVhZCh0YWdnZWRrZXl3b3JkcywgMTApCmBgYAoKIyMjIyAKCkZpcnN0LCBjb21iaW5lIGFuZCBkZWR1cGxpY2F0ZSBib3RoIHNldHMgb2Yga2V5d29yZHMuIENvdW50LCBub3c/CgpgYGB7cn0KYWxsX2tleXdvcmRzIDwtIHVuaXF1ZShhcHBlbmQodGFnZ2Vka2V5d29yZHMsIHJha2Vka2V5d29yZHMpKQpsZW5ndGgoYWxsX2tleXdvcmRzKQpgYGAKCiMjIyMgKipCdWlsZCB0aGUgY28tb2NjdXJlbmNlIG5ldHdvcmsgJiBpZGVudGlmeSBjaGFuZ2Vwb2ludHMgaW4ga2V5d29yZCBpbXBvcnRhbmNlOiBhbiBleGFtcGxlKioKCldlJ3JlIGdvaW5nIHRvIG1ha2UgYSBkb2N1bWVudC1mZWF0dXJlIG1hdHJpeCBvZiB0aGUga2V5d29yZHMuIEhlcmUgaXMgYSBzbWFsbCBleGFtcGxlIG9mIG9uZToKCmBgYHtyfQpzbW9sX2RmbSA8LSBsaXRzZWFyY2hyOjpjcmVhdGVfZGZtKAogIGVsZW1lbnRzID0gYygKICAgICJDcm9zcy1zY2FsZSBvY2N1cGFuY3kgZHluYW1pY3Mgb2YgYSBwb3N0ZmlyZSBzcGVjaWFsaXN0CiAgICBpbiByZXNwb25zZSB0byB2YXJpYXRpb24gYWNyb3NzIGEgZmlyZSByZWdpbWUiLAogICAgIlZhcmlhdGlvbiBpbiBob21lLXJhbmdlIHNpemUgb2YgQmxhY2stYmFja2VkIFdvb2RwZWNrZXJzIiwKICAgICJCbGFjay1iYWNrZWQgd29vZHBlY2tlciBvY2N1cGFuY3kgaW4gYnVybmVkIGFuZCBiZWV0bGUta2lsbGVkIGZvcmVzdHMiCiAgKSwKICBmZWF0dXJlcyA9IGMoIm9jY3VwYW5jeSIsICJ2YXJpYXRpb24iLCAiYmxhY2stYmFja2VkIHdvb2RwZWNrZXIiLCAiYnVybiIpCikKCmFzLm1hdHJpeChzbW9sX2RmbSkKYGBgCgpUaGVuLCB3ZSdyZSBnb2luZyB0byBjcmVhdGUgImEga2V5d29yZCBjby1vY2N1cnJlbmNlIG5ldHdvcmsgZnJvbSBhbiBhZGphY2VuY3kgbWF0cml4IHRyaW1tZWQgdG8gcmVtb3ZlIHJhcmUgdGVybXMuIiBBZ2FpbiwgZXh0ZW5kaW5nIHRoZSBzbW9sIGV4YW1wbGU6CgpgYGB7cn0Kc21vbF9ncmFwaCA8LSBsaXRzZWFyY2hyOjpjcmVhdGVfbmV0d29yaygKICBzZWFyY2hfZGZtID0gYXMubWF0cml4KHNtb2xfZGZtKSwKICBtaW5fc3R1ZGllcyA9IDEsCiAgbWluX29jYyA9IDEKKQoKc21vbF9ncmFwaApgYGAKCk5leHQsIHdlICJGaW5kIHRoZSBtaW5pbXVtIG5vZGUgc3RyZW5ndGggdG8gdXNlIGFzIGEgY3V0b2ZmIHBvaW50IGZvciBpbXBvcnRhbnQgbm9kZXMuIiB3aXRoIFtmaW5kX2N1dG9mZl0oaHR0cHM6Ly9yZHJyLmlvL2dpdGh1Yi9lbGl6YWdyYW1lcy9saXRzZWFyY2hyL21hbi9maW5kX2N1dG9mZi5odG1sKQoKTm90ZTogVGhlIGNoYW5nZXBvaW50IGZpdCBmaW5kcyB0aXBwaW5nIHBvaW50cyBpbiB0aGUgcmFua2VkIG9yZGVyIG9mIG5vZGUgc3RyZW5ndGhzIHRvIHVzZSBhcyBjdXRvZmZzLiBUaGUgY3VtdWxhdGl2ZSBmaXQgb3B0aW9uIGZpbmRzIHRoZSBub2RlIHN0cmVuZ3RoIGN1dG9mZiBwb2ludCBhdCB3aGljaCBhIGNlcnRhaW4gcGVyY2VudCBvZiB0aGUgdG90YWwgc3RyZW5ndGggb2YgdGhlIGdyYXBoIGlzIGNhcHR1cmVkIChlLmcuIHRoZSBmZXdlc3Qgbm9kZXMgdGhhdCBjb250YWluIDgwJSBvZiB0aGUgdG90YWwgc3RyZW5ndGgpLgoKYGBge3J9CnNtb2xjdXQxIDwtIGxpdHNlYXJjaHI6OmZpbmRfY3V0b2ZmKHNtb2xfZ3JhcGgsCiAgICAgICAgICAgIG1ldGhvZCA9ICJjdW11bGF0aXZlIiwKICAgICAgICAgICAgcGVyY2VudCA9IC45KQoKc21vbGN1dDIgPC0gbGl0c2VhcmNocjo6ZmluZF9jdXRvZmYoc21vbF9ncmFwaCwKICAgICAgICAgICAgbWV0aG9kID0gImNoYW5nZXBvaW50IiwKICAgICAgICAgICAga25vdF9udW0gPSAzKQoKc21vbGN1dDEKc21vbGN1dDIKYGBgCgpUaGVuLCB3ZSByZWR1Y2UgdGhlIGdyYXBoIHdpdGggdGhpcyBuZXcgaW5mb3JtYXRpb24uIFtyZWR1Y2UgZ3JhcGhdKGh0dHBzOi8vcmRyci5pby9naXRodWIvZWxpemFncmFtZXMvbGl0c2VhcmNoci9tYW4vcmVkdWNlX2dyYXBoLmh0bWwpICJUYWtlcyB0aGUgZnVsbCBncmFwaCBhbmQgcmVkdWNlcyBpdCB0byBvbmx5IGluY2x1ZGUgbm9kZXMgKGFuZCBhc3NvY2lhdGVkIGVkZ2VzKSBncmVhdGVyIHRoYW4gdGhlIGN1dG9mZiBzdHJlbmd0aCBmb3IgaW1wb3J0YW50IG5vZGVzLgoKYGBge3J9CnNtb2xfZ3JhcGhfcmVkdWNlZCA8LSBsaXRzZWFyY2hyOjpyZWR1Y2VfZ3JhcGgoc21vbF9ncmFwaCwgY3V0b2ZmX3N0cmVuZ3RoID0gc21vbGN1dDEpCnNtb2xfZ3JhcGhfcmVkdWNlZApgYGAKCiMjIyBBZ2FpbiwgYnV0IHdpdGggdGhlIHJlYWwgZGF0YQoKVHVybiBvdXIgZG9jdW1lbnRzIChha2EsIHRpdGxlcyBhbmQgYWJzdHJhY3RzKSArIGFsbCBrZXl3b3JkcyBpbnRvIGEgZG9jdW1lbnQtZmVhdHVyZSBtYXRyaXgKCmBgYHtyfQpuYWl2ZWRmbSA8LQogIGxpdHNlYXJjaHI6OmNyZWF0ZV9kZm0oCiAgICBlbGVtZW50cyA9IHBhc3RlKG5haXZlcmVzdWx0cyR0aXRsZSwgbmFpdmVyZXN1bHRzJGFic3RyYWN0KSwKICAgIGZlYXR1cmVzID0gYWxsX2tleXdvcmRzCiAgKQpgYGAKClRoZW4sIGNyZWF0ZSBhIG5ldHdvcmsKCmBgYHtyfQpuYWl2ZWdyYXBoIDwtCiAgbGl0c2VhcmNocjo6Y3JlYXRlX25ldHdvcmsoCiAgICBzZWFyY2hfZGZtID0gbmFpdmVkZm0sCiAgICBtaW5fc3R1ZGllcyA9IDIsCiAgICBtaW5fb2NjID0gMgogICkKYGBgCgoqKklkZW50aWZ5IGNoYW5nZSBwb2ludHMgaW4ga2V5d29yZCBpbXBvcnRhbmNlKioKCmBgYHtyfQpjdXRvZmYgPC0KICBsaXRzZWFyY2hyOjpmaW5kX2N1dG9mZigKICAgIG5haXZlZ3JhcGgsCiAgICBtZXRob2QgPSAiY3VtdWxhdGl2ZSIsCiAgICBwZXJjZW50ID0gLjgwLAogICAgaW1wX21ldGhvZCA9ICJzdHJlbmd0aCIKICApCgpgYGAKClJlZHVjZSB0aGUgZ3JhcGgKCmBgYHtyfQpyZWR1Y2VkZ3JhcGggPC0KICBsaXRzZWFyY2hyOjpyZWR1Y2VfZ3JhcGgobmFpdmVncmFwaCwgY3V0b2ZmX3N0cmVuZ3RoID0gY3V0b2ZmWzFdKQoKYGBgCgpgYGB7cn0Kc2VhcmNodGVybXMgPC0gbGl0c2VhcmNocjo6Z2V0X2tleXdvcmRzKHJlZHVjZWRncmFwaCkKCmhlYWQoc2VhcmNodGVybXMsIDIwKQpgYGAKCldlIG5lZWQgdG8gdGFrZSB0aGVzZSB0ZXJtcywgYW5kIGdyb3VwIHRoZW0sIGFuZCB0aGVuIHVzZSB0aGF0IHRvIG1ha2UgbW9yZSBzZWFyY2ggdGVybXMgdGhhdCBtYWtlIHNlbnNlLiBBIG1hbnVhbCBleGFtcGxlOiA8aHR0cHM6Ly9sdWtldHVkZ2UuZ2l0aHViLmlvL2xpdHNlYXJjaHItdHV0b3JpYWwvbGl0c2VhcmNocl90dXRvcmlhbC5odG1sPgoKYGBge3J9CndyaXRlLmNzdihzZWFyY2h0ZXJtcywgIi4vc2VhcmNoX3Rlcm1zLmNzdiIpCiMgbWFudWFsbHkgZ3JvdXAgdGVybXMgaW4gdGhlIGNzdgojIGdyb3VwZWRfdGVybXMgPC0gcmVhZC5jc3YoIi4vc2VhcmNoX3Rlcm1zX2dyb3VwZWQuY3N2IikKIyBleHRyYWN0IHRoZSB3b29kcGVja2VyIHRlcm1zIGZyb20gdGhlIGNzdgojIHdvb2RwZWNrZXJfdGVybXMgPC0gZ3JvdXBlZF90ZXJtcyR0ZXJtW2dyZXAoIndvb2RwZWNrZXIiLCBncm91cGVkX3Rlcm1zJGdyb3VwKV0KIyBqb2luIHRvZ2V0aGVyIGEgbGlzdCBvZiBtYW51YWxseSBnZW5lcmF0ZWQgd29vZHBlY2tlciB0ZXJtcyB3aXRoIHRoZSBvbmVzIGZyb20gdGhlIGNzdgojIHdvb2RwZWNrZXJzIDwtIHVuaXF1ZShhcHBlbmQoYygid29vZHBlY2tlciIpKSwgd29vZHBlY2tlcl90ZXJtcykKIyByZXBlYXQgdGhpcyBmb3IgYWxsIGNvbmNlcHQgZ3JvdXBzCiMgdGhlbiBtZXJnZSB0aGVtIGludG8gYSBsaXN0LCB1c2luZyB0aGUgY29kZSBiZWxvdyBhcyBhbiBleGFtcGxlCiMgbXlzZWFyY2h0ZXJtcyA8LSBsaXN0KHdvb2RwZWNrZXJzLCBmaXJlKQpgYGAKCiMjIFdoYXQgd2UgYXJlIGRvaW5nCgooZnJvbSBbYXRhbHN0aV0oaHR0cHM6Ly9hdGxhc3RpLmNvbS9ndWlkZXMvbGl0ZXJhdHVyZS1yZXZpZXcvbGl0ZXJhdHVyZS1yZXZpZXctdnMtbWV0YS1hbmFseXNpcykpIE1ldGEtYW5hbHlzaXMgKGNhbiBiZSBkb25lIHdpdGggUikgOiAiVGhlIHByaW1hcnkgcHVycG9zZSBvZiBhIG1ldGEtYW5hbHlzaXMgaXMgdG8gc3ludGhlc2l6ZSBbcXVhbnRpdGF0aXZlIGRhdGFdKGh0dHBzOi8vYXRsYXN0aS5jb20vcmVzZWFyY2gtaHViL3F1YW50aWZ5aW5nLXF1YWxpdGF0aXZlLWRhdGEpIGZyb20gbXVsdGlwbGUgc3R1ZGllcyB0byBhcnJpdmUgYXQgYSBzaW5nbGUgY29uY2x1c2lvbi4iCgpNZXRhLXN5bnRoZXNpczogQWx0aG91Z2ggbWV0YS1hbmFseXNlcyBhcmUgY29tbW9ubHkgYXNzb2NpYXRlZCB3aXRoIFtxdWFudGl0YXRpdmUgcmVzZWFyY2hdKGh0dHBzOi8vYXRsYXN0aS5jb20vcmVzZWFyY2gtaHViL3F1YW50aXRhdGl2ZS1zb2Z0d2FyZSksIHRoZXkgY2FuIGFsc28gYmUgYXBwbGllZCB0byBbcXVhbGl0YXRpdmUgcmVzZWFyY2hdKGh0dHBzOi8vYXRsYXN0aS5jb20vZ3VpZGVzL3F1YWxpdGF0aXZlLXJlc2VhcmNoLWd1aWRlLXBhcnQtMS9xdWFsaXRhdGl2ZS1yZXNlYXJjaCkgdGhyb3VnaCBhIHByb2Nlc3Mga25vd24gYXMgbWV0YS1zeW50aGVzaXMuIE1ldGEtc3ludGhlc2lzIGludm9sdmVzIHN5c3RlbWF0aWNhbGx5IHJldmlld2luZyBhbmQgaW50ZWdyYXRpbmcgZmluZGluZ3MgZnJvbSBtdWx0aXBsZSBxdWFsaXRhdGl2ZSBzdHVkaWVzIHRvIGRyYXcgYnJvYWRlciBjb25jbHVzaW9ucy4gVGhpcyBhcHByb2FjaCBhbGxvd3MgcmVzZWFyY2hlcnMgdG8gY29tYmluZSBxdWFsaXRhdGl2ZSBkYXRhIHRvIGRldmVsb3AgbmV3IHRoZW9yaWVzLCB1bmRlcnN0YW5kIGNvbXBsZXggcGhlbm9tZW5hLCBhbmQgW2dhaW4gaW5zaWdodHNdKGh0dHBzOi8vYXRsYXN0aS5jb20vdHJhaW5pbmdzL3F1aWNrbHktZ2Fpbi1pbnNpZ2h0cy13aXRoLWFpLXBvd2VyZWQtdG9vbHMpIGludG8gY29udGV4dHVhbCBmYWN0b3JzLgoKVXNpbmcgbWV0YS1zeW50aGVzaXMsIHF1YWxpdGF0aXZlIG1ldGEtYW5hbHlzZXMgY2FuIGhlbHAgcHJvdmlkZSBhIGRlZXBlciB1bmRlcnN0YW5kaW5nIG9mIGEgcmVzZWFyY2ggdG9waWMgYnkgaW5jb3Jwb3JhdGluZyBkaXZlcnNlIHBlcnNwZWN0aXZlcyBhbmQgZXhwZXJpZW5jZXMgZnJvbSB2YXJpb3VzIHN0dWRpZXMuIFRoaXMgbWV0aG9kIGNhbiByZXZlYWwgcGF0dGVybnMgYW5kIHRoZW1lcyB0aGF0IG1pZ2h0IG5vdCBiZSBldmlkZW50IGluIGluZGl2aWR1YWwgcXVhbGl0YXRpdmUgc3R1ZGllcywgdGhlcmVieSBlbmhhbmNpbmcgdGhlIHJpY2huZXNzIGFuZCBkZXB0aCBvZiB0aGUgYW5hbHlzaXMuIEJ5IGNvbWJpbmluZyB0aGUgc3RyZW5ndGhzIG9mIGJvdGggcXVhbnRpdGF0aXZlIGFuZCBxdWFsaXRhdGl2ZSByZXNlYXJjaCwgbWV0YS1hbmFseXNlcyBjYW4gb2ZmZXIgYSBtb3JlIGNvbXByZWhlbnNpdmUgdmlldyBvZiB0aGUgcmVzZWFyY2ggbGFuZHNjYXBlLCBzdXBwb3J0aW5nIGV2aWRlbmNlLWJhc2VkIHByYWN0aWNlIGFuZCBpbmZvcm1lZCBkZWNpc2lvbi1tYWtpbmcuCgojIyBSZWZlcmVuY2VzCgotICAgPGh0dHBzOi8vbGl0ZXJhdHVyZXN5bnRoZXNpcy5naXRodWIuaW8vPgo=</div>
 
 
 
@@ -1854,7 +2155,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
-  window.initializeSourceEmbed("data_sources.Rmd");
+  window.initializeSourceEmbed("literature_review.Rmd");
   window.initializeCodeFolding("show" === "show");
 });
 </script>
