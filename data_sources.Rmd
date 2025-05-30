@@ -1,0 +1,44 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## Data Sources
+
+We are focusing on databases that are commonly used by Computer Science, Engineering, and Medical researchers.
+
+Next task: Can we convert all of these different formats (CSV, RIS, BIB) to be consumable?
+
+### Usenix
+
+search: [carceral](https://www.usenix.org/publications/proceedings/carceral), 1 result (similarly small results from "incarcerated", "prison", "jail")
+
+### PubMed
+
+format: CSV search (performed May 28, 2025):
+
+-   [carceral](https://pubmed.ncbi.nlm.nih.gov/?term=carceral) - 592 `pubmed_carceral.csv`
+-   [carceral technology (no quotes)](https://pubmed.ncbi.nlm.nih.gov/?term=carceral+technology) - 29 `pubmed_carceral_technology.csv`
+-   [carceral technologies (no quotes)](https://pubmed.ncbi.nlm.nih.gov/?term=carceral+technologies) - 29 - `pubmed_carceral_technologies.csv`
+
+### ACM Digital Library
+
+-   search: May 28, 2025
+
+-   format: Bibtex, ACM Ref or Endnote
+
+-   searching: The ACM guide to computing literature (3,893,916 records)
+
+-   [carceral] - 149 - `acm-carceral.bib`
+
+-   carceral technology (no quotes) - 147 - `acm-carceral-technology.bib`
+
+-   [carceral technologies (no quotes)] - 147 - `acm-carceral-technologies.bib`
+
+### IEEE Explore
+
+-   search: May 28, 2025
+
+-   [carceral] - 0 results
+
+-   [jail OR prison OR incarceration] - 695 - `IEEE-jailprisonincarceration.csv`

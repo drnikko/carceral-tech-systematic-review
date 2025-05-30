@@ -1,0 +1,141 @@
+---
+title: "First-pass."
+output: html_notebook
+---
+
+I did a search for "carceral technology" in web of science (which lets me authenticate with MIT creds. Scopus was broken).
+
+Working through the example here:<https://elizagrames.github.io/litsearchr/litsearchr_vignette.html>
+
+```{r}
+search_directory <- "/Users/drnikki/Dropbox/research/carceral-tech/bibs"
+naiveimport <-
+  litsearchr::import_results(directory = search_directory, verbose = TRUE)
+
+```
+
+```{r}
+
+
+
+naiveresults <-
+  litsearchr::remove_duplicates(naiveimport, field = "title", method = "string_osa")
+
+
+```
+
+RAKE: Rapid Automatic Keyword Extraction (RAKE)
+
+```{r}
+
+litsearchr::extract_terms(
+  text = c(
+    "Cross-scale occupancy dynamics of a postfire specialist
+    in response to variation across a fire regime",
+    "Variation in home-range size of Black-backed Woodpeckers",
+    "Black-backed woodpecker occupancy in burned and beetle-killed forests"
+  ),
+  method = "fakerake",
+  min_freq=1,
+  min_n=2
+)
+```
+
+```{r}
+rakedkeywords <-
+  litsearchr::extract_terms(
+    text = paste(naiveresults$title, naiveresults$abstract),
+    method = "fakerake",
+    min_freq = 2,
+    ngrams = TRUE,
+    min_n = 2,
+    language = "English"
+  )
+#> Loading required namespace: stopwords
+rakedkeywords
+
+```
+
+TODO: there are several keywords fields (keywords, ieee keywords, author keywords)...
+
+```{r}
+## This from the tutorial doesn't work because there are no keywords fields in the results from Web of Science... 
+taggedkeywords <-
+  litsearchr::extract_terms(
+    keywords = naiveresults$keywords,
+    method = "tagged",
+    min_freq = 2,
+    ngrams = TRUE,
+    min_n = 2,
+    language = "English"
+  )
+
+```
+
+#### **Build the co-occurence network**
+
+```{r}
+
+all_keywords <- unique(rakedkeywords) ## removing the tagged keywords
+
+naivedfm <-
+  litsearchr::create_dfm(
+    elements = paste(naiveresults$title, naiveresults$abstract),
+    features = all_keywords
+  )
+
+naivegraph <-
+  litsearchr::create_network(
+    search_dfm = naivedfm,
+    min_studies = 2,
+    min_occ = 2
+  )
+```
+
+**Identify change points in keyword importance**
+
+```{r}
+cutoff <-
+  litsearchr::find_cutoff(
+    naivegraph,
+    method = "cumulative",
+    percent = .80,
+    imp_method = "strength"
+  )
+
+reducedgraph <-
+  litsearchr::reduce_graph(naivegraph, cutoff_strength = cutoff[1])
+
+searchterms <- litsearchr::get_keywords(reducedgraph)
+
+head(searchterms, 20)
+```
+
+![]()
+
+We need to take these terms, and group them, and then use that to make more search terms that make sense. A manual example: <https://luketudge.github.io/litsearchr-tutorial/litsearchr_tutorial.html>
+
+```{r}
+write.csv(searchterms, "./search_terms.csv")
+# manually group terms in the csv
+# grouped_terms <- read.csv("./search_terms_grouped.csv")
+# extract the woodpecker terms from the csv
+# woodpecker_terms <- grouped_terms$term[grep("woodpecker", grouped_terms$group)]
+# join together a list of manually generated woodpecker terms with the ones from the csv
+# woodpeckers <- unique(append(c("woodpecker")), woodpecker_terms)
+# repeat this for all concept groups
+# then merge them into a list, using the code below as an example
+# mysearchterms <- list(woodpeckers, fire)
+```
+
+## What we are doing
+
+(from [atalsti](https://atlasti.com/guides/literature-review/literature-review-vs-meta-analysis)) Meta-analysis (can be done with R) : "The primary purpose of a meta-analysis is to synthesize [quantitative data](https://atlasti.com/research-hub/quantifying-qualitative-data) from multiple studies to arrive at a single conclusion."
+
+Meta-synthesis: Although meta-analyses are commonly associated with [quantitative research](https://atlasti.com/research-hub/quantitative-software), they can also be applied to [qualitative research](https://atlasti.com/guides/qualitative-research-guide-part-1/qualitative-research) through a process known as meta-synthesis. Meta-synthesis involves systematically reviewing and integrating findings from multiple qualitative studies to draw broader conclusions. This approach allows researchers to combine qualitative data to develop new theories, understand complex phenomena, and [gain insights](https://atlasti.com/trainings/quickly-gain-insights-with-ai-powered-tools) into contextual factors.
+
+Using meta-synthesis, qualitative meta-analyses can help provide a deeper understanding of a research topic by incorporating diverse perspectives and experiences from various studies. This method can reveal patterns and themes that might not be evident in individual qualitative studies, thereby enhancing the richness and depth of the analysis. By combining the strengths of both quantitative and qualitative research, meta-analyses can offer a more comprehensive view of the research landscape, supporting evidence-based practice and informed decision-making.
+
+## References
+
+-   <https://literaturesynthesis.github.io/>
